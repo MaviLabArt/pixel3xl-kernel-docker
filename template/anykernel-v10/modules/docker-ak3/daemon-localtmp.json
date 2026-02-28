@@ -1,0 +1,9 @@
+{
+  "data-root": "/data/local/tmp/docker-root",
+  "exec-root": "/data/local/tmp/docker-exec",
+  "pidfile": "/data/local/tmp/docker.pid",
+  "hosts": [
+    "unix:///data/data/com.termux/files/usr/var/run/docker.sock"
+  ],
+  "storage-driver": "overlay2"
+}

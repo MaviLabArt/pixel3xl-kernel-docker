@@ -1,0 +1,6 @@
+auto-build-runs/
+src/
+toolwrap-auto/
+*.zip
+*.zip.sha256
+*.log

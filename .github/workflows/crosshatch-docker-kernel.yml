@@ -1,0 +1,146 @@
+name: Crosshatch Docker Kernel
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_build:
+        description: Build even if a release for the latest nightly already exists
+        required: false
+        default: false
+        type: boolean
+      install_deps:
+        description: Install build dependencies on the self-hosted runner
+        required: false
+        default: true
+        type: boolean
+  schedule:
+    - cron: '17 */6 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crosshatch-docker-kernel
+  cancel-in-progress: false
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.decide.outputs.should_build }}
+      release_tag: ${{ steps.meta.outputs.release_tag }}
+      lineage_filename: ${{ steps.meta.outputs.filename }}
+      date_stamp: ${{ steps.meta.outputs.date_stamp }}
+      os_patch_month: ${{ steps.meta.outputs.os_patch_month }}
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Read latest Lineage build metadata
+        id: meta
+        run: |
+          python3 ./scripts/get_latest_crosshatch_build_meta.py > meta.json
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          meta = json.load(open("meta.json"))
+          for key in ["release_tag", "filename", "date_stamp", "os_patch_month"]:
+              print(f"{key}={meta[key]}")
+          PY
+
+      - name: Decide whether to build
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORCE_BUILD: ${{ github.event_name == 'workflow_dispatch' && inputs.force_build || 'false' }}
+        run: |
+          if [ "$FORCE_BUILD" = "true" ]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if gh release view "${{ steps.meta.outputs.release_tag }}" >/dev/null 2>&1; then
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: detect
+    if: needs.detect.outputs.should_build == 'true'
+    runs-on:
+      - self-hosted
+      - linux
+    timeout-minutes: 240
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        if: github.event_name != 'workflow_dispatch' || inputs.install_deps
+        run: |
+          chmod +x ./scripts/install_build_deps.sh
+          ./scripts/install_build_deps.sh
+
+      - name: Build AnyKernel3 package
+        id: build
+        run: |
+          chmod +x ./scripts/build_latest_crosshatch_docker_kernel.sh
+          ./scripts/build_latest_crosshatch_docker_kernel.sh
+
+      - name: Upload release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: crosshatch-docker-kernel-${{ steps.build.outputs.lineage_build_stamp }}
+          path: |
+            ${{ steps.build.outputs.artifact_zip }}
+            ${{ steps.build.outputs.artifact_sha256 }}
+          if-no-files-found: error
+
+  publish:
+    needs:
+      - detect
+      - build
+    if: needs.detect.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download release assets
+        uses: actions/download-artifact@v4
+        with:
+          name: crosshatch-docker-kernel-${{ needs.detect.outputs.date_stamp }}
+          path: dist
+
+      - name: Prepare release notes
+        run: |
+          cat > release-notes.txt <<EOF
+          Built from the latest fetched \`origin/lineage-22.2\` heads for:
+          - android_kernel_google_msm-4.9
+          - android_device_google_crosshatch
+
+          Target nightly:
+          - ${{ needs.detect.outputs.lineage_filename }}
+
+          Patch level target:
+          - ${{ needs.detect.outputs.os_patch_month }}
+
+          Payload:
+          - rebuilt Image.lz4
+          - rebuilt combined DTB
+          - AnyKernel3 package with the working Docker v10 userspace integration
+
+          Notes:
+          - This workflow follows the practical strategy: latest published nightly metadata plus latest fetched branch heads.
+          - It does not reconstruct Lineage's exact internal source snapshot for each nightly.
+          EOF
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag='${{ needs.detect.outputs.release_tag }}'
+          title='${{ needs.detect.outputs.lineage_filename }}'
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" dist/* --clobber
+            gh release edit "$tag" --title "$title" --notes-file release-notes.txt
+          else
+            gh release create "$tag" dist/* --title "$title" --notes-file release-notes.txt
+          fi
