@@ -50,7 +50,7 @@ ensure_repo() {
 
   info "Cloning $(basename "$repo_dir") from $remote_url"
   mkdir -p "$(dirname "$repo_dir")"
-  git clone --branch "$branch" --single-branch "$remote_url" "$repo_dir"
+  git clone --depth=1 --branch "$branch" --single-branch "$remote_url" "$repo_dir"
 }
 
 fetch_latest_build_meta() {
@@ -434,8 +434,8 @@ eval "$(fetch_latest_build_meta)"
 prepare_toolwrap
 
 info "Fetching latest source heads"
-git -C "$KERNEL_REPO" fetch --quiet origin "$LINEAGE_BRANCH"
-git -C "$DEVICE_REPO" fetch --quiet origin "$LINEAGE_BRANCH"
+git -C "$KERNEL_REPO" fetch --quiet --depth=1 origin "$LINEAGE_BRANCH"
+git -C "$DEVICE_REPO" fetch --quiet --depth=1 origin "$LINEAGE_BRANCH"
 
 KERNEL_COMMIT="$(git -C "$KERNEL_REPO" rev-parse "origin/$LINEAGE_BRANCH")"
 DEVICE_COMMIT="$(git -C "$DEVICE_REPO" rev-parse "origin/$LINEAGE_BRANCH")"

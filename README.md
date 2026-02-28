@@ -33,7 +33,7 @@ Workflow:
 
 Model:
 - detect latest nightly on GitHub-hosted Ubuntu
-- build on a self-hosted Linux runner
+- build on GitHub-hosted `ubuntu-latest`
 - publish the zip and checksum as a GitHub Release
 
 See:

@@ -9,7 +9,7 @@ on:
         default: false
         type: boolean
       install_deps:
-        description: Install build dependencies on the self-hosted runner
+        description: Install build dependencies on the GitHub-hosted runner
         required: false
         default: true
         type: boolean
@@ -67,13 +67,17 @@ jobs:
   build:
     needs: detect
     if: needs.detect.outputs.should_build == 'true'
-    runs-on:
-      - self-hosted
-      - linux
+    runs-on: ubuntu-latest
     timeout-minutes: 240
     steps:
       - name: Check out repo
         uses: actions/checkout@v4
+
+      - name: Show runner capacity
+        run: |
+          nproc
+          free -h
+          df -h
 
       - name: Install build dependencies
         if: github.event_name != 'workflow_dispatch' || inputs.install_deps
@@ -86,6 +90,12 @@ jobs:
         run: |
           chmod +x ./scripts/build_latest_crosshatch_docker_kernel.sh
           ./scripts/build_latest_crosshatch_docker_kernel.sh
+
+      - name: Show workspace usage after build
+        if: always()
+        run: |
+          du -sh . src auto-build-runs toolwrap-auto 2>/dev/null || true
+          df -h
 
       - name: Upload release assets
         uses: actions/upload-artifact@v4

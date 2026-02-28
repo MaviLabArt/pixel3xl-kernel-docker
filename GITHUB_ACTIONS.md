@@ -8,14 +8,13 @@ What it does:
 - publishes the zip and `.sha256` as a GitHub Release
 
 Runner model:
-- `detect` and `publish` run on GitHub-hosted Ubuntu
-- `build` runs on a self-hosted Linux runner
+- all jobs run on GitHub-hosted Ubuntu
 
-Self-hosted runner requirements:
-- Linux runner with `self-hosted` and `linux` labels
-- enough free disk for kernel source + output
-- `sudo` available to install dependencies automatically, or preinstalled equivalents
-- enough RAM/CPU for a 4.9 kernel build
+GitHub-hosted runner notes:
+- the workflow now targets `ubuntu-latest`
+- standard GitHub-hosted Ubuntu runners currently have 14 GB SSD
+- this repo uses shallow clones to keep the build inside that disk budget
+- if GitHub changes runner capacity or the source tree grows enough, the build may need further cleanup or a larger runner
 
 Dependency install behavior:
 - the workflow can install dependencies automatically through:
