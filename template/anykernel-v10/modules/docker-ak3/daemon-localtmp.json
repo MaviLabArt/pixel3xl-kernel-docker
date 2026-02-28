@@ -1,9 +1,9 @@
 {
-  "data-root": "/data/local/tmp/docker-root",
-  "exec-root": "/data/local/tmp/docker-exec",
-  "pidfile": "/data/local/tmp/docker.pid",
+  "data-root": "/data/local/tmp/docker-root-vfs",
+  "exec-root": "/data/local/tmp/docker-exec-vfs",
+  "pidfile": "/data/local/tmp/docker-vfs.pid",
   "hosts": [
     "unix:///data/data/com.termux/files/usr/var/run/docker.sock"
   ],
-  "storage-driver": "overlay2"
+  "storage-driver": "vfs"
 }

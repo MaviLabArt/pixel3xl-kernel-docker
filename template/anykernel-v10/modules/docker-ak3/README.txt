@@ -15,3 +15,14 @@ Automatic behavior:
 Compose compatibility:
   - The bundled Docker daemon exposes API v1.43.
   - Newer Docker Compose clients may default to a newer API and fail unless DOCKER_API_VERSION=1.43 is set.
+
+Storage driver:
+  - The packaged daemon uses `vfs` with `/data/local/tmp/docker-root-vfs`.
+  - This avoids Android/f2fs issues seen with `overlay2` on some images.
+
+Seccomp note:
+  - Debian/Ubuntu/glibc-based images may fail under the default seccomp profile on this Android setup.
+  - For `docker run`, use `--security-opt seccomp=unconfined`.
+  - For Compose, add:
+      security_opt:
+        - seccomp=unconfined
