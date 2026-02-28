@@ -1,4 +1,5 @@
 export DOCKER_HOST=unix:///data/data/com.termux/files/usr/var/run/docker.sock
+export DOCKER_API_VERSION=1.43
 
 docker_ak3_socket=/data/data/com.termux/files/usr/var/run/docker.sock
 docker_ak3_starter=/data/adb/docker-ak3/start-dockerd.sh
